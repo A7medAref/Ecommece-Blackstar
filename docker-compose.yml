@@ -1,0 +1,53 @@
+services:
+  backend:
+    build: .
+    env_file:
+      - .env
+    volumes:
+      - shared-images:/usr/src/app/frontend/public/images
+    depends_on:
+      - mongo
+      - init-images
+
+  mongo:
+    image: mongo:latest
+    container_name: mongo
+    volumes:
+      - blackstar-mongo-db:/data/db
+    ports:
+      - "27017:27017"
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - shared-images:/usr/src/app/public/images
+    depends_on:
+      - backend
+      - init-images
+  mongo-express:
+    image: mongo-express
+    ports:
+      - "8081:8081"
+    environment:
+      # "mongodb://mongo:27017/ecommerce"
+      ME_CONFIG_MONGODB_URL: "mongodb://mongo:27017/ecommerce"
+    depends_on:
+      - mongo
+
+  init-images:
+    image: busybox
+    command: /bin/sh -c "if [ -z \"$(ls -A /target)\" ]; then cp -r /data/* /target; else echo 'Images directory already initialized'; fi"
+    volumes:
+      - ./frontend/public/images:/data
+      - shared-images:/target
+    deploy:
+      restart_policy:
+        condition: none
+    depends_on:
+      - mongo
+
+volumes:
+  blackstar-mongo-db:
+  shared-images:
